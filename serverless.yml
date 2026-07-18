@@ -1,0 +1,110 @@
+service: feedback-flow
+
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: java21
+  region: us-east-1
+  timeout: 30
+  memorySize: 512
+
+  # Environment variables available to all Lambda functions
+  environment:
+    AWS_REGION: us-east-1
+    SNS_TOPIC_ARN:
+      Ref: CriticalFeedbackTopic
+    SENDER_EMAIL: noreply@feedbackflow.com
+    ADMIN_EMAIL: admin@feedbackflow.com
+    FEEDBACKS_TABLE:
+      Ref: FeedbacksTable
+
+  # IAM permissions for all Lambda functions
+  iam:
+    role:
+      statements:
+        # DynamoDB permissions
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:Scan
+            - dynamodb:Query
+            - dynamodb:GetItem
+          Resource:
+            - !GetAtt FeedbacksTable.Arn
+        # SNS permissions
+        - Effect: Allow
+          Action:
+            - sns:Publish
+          Resource:
+            - !Ref CriticalFeedbackTopic
+        # SES permissions
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
+          Resource: "*"
+        # CloudWatch Logs
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: "*"
+
+# Infrastructure resources (created automatically on deploy)
+resources:
+  Resources:
+    # 1. DynamoDB Table - Feedbacks
+    FeedbacksTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Feedbacks
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+
+    # 2. SNS Topic - Critical Feedbacks
+    CriticalFeedbackTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: FeedbacksCriticos
+        DisplayName: Critical Feedback Notifications
+
+# Lambda functions
+functions:
+  # Lambda 1: Receive Feedback (POST /feedback)
+  ReceiveFeedbackHandler:
+    handler: com.feedbackflow.functions.ReceiveFeedbackHandler
+    events:
+      - http:
+          path: feedback
+          method: post
+          cors: true
+
+  # Lambda 2: Notify Admin (triggered by SNS)
+  NotifyAdminHandler:
+    handler: com.feedbackflow.functions.NotifyAdminHandler
+    events:
+      - sns:
+          topicName: FeedbacksCriticos
+          arn:
+            Ref: CriticalFeedbackTopic
+
+  # Lambda 3: Generate Weekly Report (triggered by EventBridge every Friday)
+  GenerateReportHandler:
+    handler: com.feedbackflow.functions.GenerateReportHandler
+    events:
+      - schedule:
+          name: WeeklyReportSchedule
+          description: Triggers weekly report every Friday at 10:00 AM UTC
+          rate: cron(0 10 ? * FRI *)
+          enabled: true
+
+# Package configuration
+package:
+  artifact: target/feedback-flow-1.0.0.jar
