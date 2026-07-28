@@ -11,11 +11,10 @@ provider:
 
   # Environment variables available to all Lambda functions
   environment:
-    AWS_REGION: us-east-1
     SNS_TOPIC_ARN:
       Ref: CriticalFeedbackTopic
-    SENDER_EMAIL: noreply@feedbackflow.com
-    ADMIN_EMAIL: admin@feedbackflow.com
+    SENDER_EMAIL: gslima0806@gmail.com
+    ADMIN_EMAIL: guizinholima2608@gmail.com
     FEEDBACKS_TABLE:
       Ref: FeedbacksTable
 
@@ -79,7 +78,7 @@ resources:
 functions:
   # Lambda 1: Receive Feedback (POST /feedback)
   ReceiveFeedbackHandler:
-    handler: com.feedbackflow.functions.ReceiveFeedbackHandler
+    handler: com.br.feedbackflow.functions.ReceiveFeedbackHandler
     events:
       - http:
           path: feedback
@@ -88,7 +87,7 @@ functions:
 
   # Lambda 2: Notify Admin (triggered by SNS)
   NotifyAdminHandler:
-    handler: com.feedbackflow.functions.NotifyAdminHandler
+    handler: com.br.feedbackflow.functions.NotifyAdminHandler
     events:
       - sns:
           topicName: FeedbacksCriticos
@@ -97,7 +96,7 @@ functions:
 
   # Lambda 3: Generate Weekly Report (triggered by EventBridge every Friday)
   GenerateReportHandler:
-    handler: com.feedbackflow.functions.GenerateReportHandler
+    handler: com.br.feedbackflow.functions.GenerateReportHandler
     events:
       - schedule:
           name: WeeklyReportSchedule
@@ -107,4 +106,4 @@ functions:
 
 # Package configuration
 package:
-  artifact: target/feedback-flow-1.0.0.jar
+  artifact: target/feedbackflow-1.0.0-SNAPSHOT.jar

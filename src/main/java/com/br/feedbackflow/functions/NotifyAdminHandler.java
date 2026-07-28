@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.SNSEvent;
 import com.br.feedbackflow.config.AWSConfig;
 import com.br.feedbackflow.service.NotificationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.ses.SesClient;
@@ -17,7 +18,7 @@ import java.util.List;
 public class NotifyAdminHandler implements RequestHandler<SNSEvent, String> {
 
     private static final Logger logger = LoggerFactory.getLogger(NotifyAdminHandler.class);
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
     private final NotificationService notificationService;
 
     public NotifyAdminHandler() {
